@@ -1,5 +1,6 @@
 from setuptools import find_packages, setup
-
+import os
+from glob import glob
 package_name = 'gesture_servo'
 
 setup(
@@ -10,6 +11,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,6 +26,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'gesture_capture_node = gesture_servo.gesture_capture_node:main',
+            'servo_ctrl_node      = gesture_servo.servo_ctrl_node:main',
+            'serial_node          = gesture_servo.serial_node:main',
         ],
     },
 )
