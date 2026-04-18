@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Int16MultiArray
+import socket
+
+class Stm32UdpBridge(Node):
+    def __init__(self):
+        super().__init__('stm32_udp_node')
+
+        self.target_ip = "host.docker.internal" 
+        self.target_port = 10000
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        self.subscription = self.create_subscription(
+            Int16MultiArray,
+            'servo_cmd',
+            self.cmd_callback,
+            10
+        )
+        self.get_logger().info(f"✅ ROS 2 UDP 节点已启动！目标: {self.target_ip}:{self.target_port}")
+
+    def cmd_callback(self, msg):
+        if len(msg.data) >= 2:
+            angle1 = max(0, min(180, msg.data[0]))
+            angle2 = max(0, min(180, msg.data[1]))
+
+            frame = bytes([0xFF, angle1, angle2, 0xFE])
+
+            try:
+                self.sock.sendto(frame, (self.target_ip, self.target_port))
+                hex_str = ' '.join([f"{b:02X}" for b in frame])
+                self.get_logger().info(f"UDP 发送 -> [ {hex_str} ]")
+            except Exception as e:
+                self.get_logger().error(f"发送异常: {e}")
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = Stm32UdpBridge()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.sock.close()
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
